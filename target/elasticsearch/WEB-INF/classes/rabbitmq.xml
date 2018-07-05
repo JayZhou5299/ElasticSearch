@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:aop="http://www.springframework.org/schema/aop" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+    http://www.springframework.org/schema/rabbit
+    http://www.springframework.org/schema/rabbit/spring-rabbit-1.0.xsd
+    http://www.springframework.org/schema/aop
+    http://www.springframework.org/schema/aop/spring-aop-3.1.xsd
+    http://www.springframework.org/schema/context
+    http://www.springframework.org/schema/context/spring-context-3.1.xsd">
+
+    <!-- 连接服务配置 -->
+    <rabbit:connection-factory id="connectionFactory"
+        host="${rabbitmq.host}" port="${rabbitmq.port}" username="${rabbitmq.username}"
+        password="${rabbitmq.password}" channel-cache-size="${rabbitmq.channel.cache.size}" />
+
+    <!-- 创建rabbitAdmin 代理类 -->
+    <rabbit:admin connection-factory="connectionFactory" />
+
+<!--     <rabbit:queue id="queue_redis" name="${rabbitmq.redis.cache.queue}" durable="true"
+        auto-delete="false" exclusive="false" />
+
+    <rabbit:queue id="queue_elasticsearch" name="${rabbitmq.elasticsearch.queue}" durable="true"
+        auto-delete="false" exclusive="false" /> -->
+
+    <rabbit:queue id="queue_msg_history" name="${rabbitmq.message.history.queue}" durable="true"
+        auto-delete="false" exclusive="false" />
+
+    <rabbit:queue id="queue_create_pay_account" name="${rabbitmq.message.create.pay.account.queue}" durable="true"
+        auto-delete="false" exclusive="false" />
+
+<!--     <rabbit:queue id="queue_nd_activity" name="${rabbitmq.national.day.activity.queue}" durable="true"
+        auto-delete="false" exclusive="false" /> -->
+
+    <rabbit:queue id="queue_transaction_sequence" name="${rabbitmq.transaction.sequence.queue}" durable="true"
+        auto-delete="false" exclusive="false" />
+
+<!--     <rabbit:queue id="queue_news_sync" name="${rabbitmq.mews.sync.queue}" durable="true"
+        auto-delete="false" exclusive="false" /> -->
+
+    <!--路由设置 将队列绑定，属于direct类型 -->
+    <rabbit:direct-exchange id="directExchange"
+        name="directExchange" durable="true" auto-delete="false">
+        <rabbit:bindings>
+            <!-- <rabbit:binding queue="queue_redis" key="${rabbitmq.redis.cache.queue}" />
+            <rabbit:binding queue="queue_elasticsearch" key="${rabbitmq.elasticsearch.queue}" /> -->
+            <rabbit:binding queue="queue_msg_history" key="${rabbitmq.message.history.queue}" />
+            <rabbit:binding queue="queue_create_pay_account" key="${rabbitmq.message.create.pay.account.queue}" />
+            <!-- <rabbit:binding queue="queue_nd_activity" key="${rabbitmq.national.day.activity.queue}" /> -->
+            <rabbit:binding queue="queue_transaction_sequence" key="${rabbitmq.transaction.sequence.queue}" />
+            <!-- <rabbit:binding queue="queue_news_sync" key="${rabbitmq.mews.sync.queue}" /> -->
+        </rabbit:bindings>
+    </rabbit:direct-exchange>
+
+    <bean id="ackManual"
+        class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+        <property name="staticField"
+            value="org.springframework.amqp.core.AcknowledgeMode.MANUAL" />
+    </bean>
+    <!-- <bean
+        class="org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer">
+        <property name="connectionFactory" ref="connectionFactory" />
+        <property name="acknowledgeMode" ref="ackManual" />
+        <property name="queueNames" value="${rabbitmq.redis.cache.queue}" />
+        <property name="messageListener">
+            <bean class="com.sf.heros.mq.consumer.listener.RedisCacheListener" />
+        </property>
+        <property name="concurrentConsumers" value="${rabbitmq.concurrentConsumers}" />
+        <property name="channelTransacted" value="true"/>
+        <property name="adviceChain">
+            <bean
+                class="org.springframework.amqp.rabbit.config.StatelessRetryOperationsInterceptorFactoryBean">
+                <property name="messageRecoverer">
+                    <bean
+                        class="com.sf.heros.mq.consumer.utils.MQRejectAndDontRequeueRecoverer" />
+                        <bean class="com.sf.heros.mq.consumer.utils.MQRepublishMessageRecoverer"/>
+                </property>
+                <property name="retryOperations">
+                    <bean class="org.springframework.retry.support.RetryTemplate">
+                        <property name="backOffPolicy">
+                            <bean
+                                class="org.springframework.retry.backoff.ExponentialBackOffPolicy">
+                                <property name="initialInterval" value="500" />
+                                <property name="multiplier" value="10.0" />
+                                <property name="maxInterval" value="10000" />
+                            </bean>
+                        </property>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+        <property name="errorHandler">
+            <bean class="com.sf.heros.mq.consumer.utils.MQErrorHandler"/>
+        </property>
+    </bean>
+
+    <bean
+        class="org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer">
+        <property name="connectionFactory" ref="connectionFactory" />
+        <property name="acknowledgeMode" ref="ackManual" />
+        <property name="queueNames" value="${rabbitmq.elasticsearch.queue}" />
+        <property name="messageListener">
+            <bean class="com.sf.heros.mq.consumer.listener.ElasticsearchListener" />
+        </property>
+        <property name="concurrentConsumers" value="${rabbitmq.concurrentConsumers}" />
+        <property name="channelTransacted" value="true"/>
+        <property name="adviceChain">
+            <bean
+                class="org.springframework.amqp.rabbit.config.StatelessRetryOperationsInterceptorFactoryBean">
+                <property name="messageRecoverer">
+                    <bean
+                        class="com.sf.heros.mq.consumer.utils.MQRejectAndDontRequeueRecoverer" />
+                    <bean class="com.sf.heros.mq.consumer.utils.MQRepublishMessageRecoverer"/>
+                </property>
+                <property name="retryOperations">
+                    <bean class="org.springframework.retry.support.RetryTemplate">
+                        <property name="backOffPolicy">
+                            <bean
+                                class="org.springframework.retry.backoff.ExponentialBackOffPolicy">
+                                <property name="initialInterval" value="500" />
+                                <property name="multiplier" value="10.0" />
+                                <property name="maxInterval" value="10000" />
+                            </bean>
+                        </property>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+        <property name="errorHandler">
+            <bean class="com.sf.heros.mq.consumer.utils.MQErrorHandler"/>
+        </property>
+    </bean> -->
+
+    <bean
+        class="org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer">
+        <property name="connectionFactory" ref="connectionFactory" />
+        <property name="acknowledgeMode" ref="ackManual" />
+        <property name="queueNames" value="${rabbitmq.message.history.queue}" />
+        <property name="messageListener">
+            <bean class="com.sf.heros.mq.consumer.listener.MsgHistoryListener" />
+        </property>
+        <property name="concurrentConsumers" value="${rabbitmq.concurrentConsumers}" />
+        <!-- <property name="channelTransacted" value="true"/> -->
+        <property name="adviceChain">
+            <bean
+                class="org.springframework.amqp.rabbit.config.StatelessRetryOperationsInterceptorFactoryBean">
+                <property name="messageRecoverer">
+                    <!-- <bean
+                        class="com.sf.heros.mq.consumer.utils.MQRejectAndDontRequeueRecoverer" /> -->
+                    <bean class="com.sf.heros.mq.consumer.utils.MQRepublishMessageRecoverer"/>
+                </property>
+                <property name="retryOperations">
+                    <bean class="org.springframework.retry.support.RetryTemplate">
+                        <property name="backOffPolicy">
+                            <bean
+                                class="org.springframework.retry.backoff.ExponentialBackOffPolicy">
+                                <property name="initialInterval" value="500" />
+                                <property name="multiplier" value="10.0" />
+                                <property name="maxInterval" value="10000" />
+                            </bean>
+                        </property>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+        <property name="errorHandler">
+            <bean class="com.sf.heros.mq.consumer.utils.MQErrorHandler"/>
+        </property>
+    </bean>
+
+    <bean
+        class="org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer">
+        <property name="connectionFactory" ref="connectionFactory" />
+        <property name="acknowledgeMode" ref="ackManual" />
+        <property name="queueNames" value="${rabbitmq.message.create.pay.account.queue}" />
+        <property name="messageListener">
+            <bean class="com.sf.heros.mq.consumer.listener.CreatePayAccountListener" />
+        </property>
+        <property name="concurrentConsumers" value="${rabbitmq.concurrentConsumers}" />
+        <!-- <property name="channelTransacted" value="true"/> -->
+        <property name="adviceChain">
+            <bean
+                class="org.springframework.amqp.rabbit.config.StatelessRetryOperationsInterceptorFactoryBean">
+                <property name="messageRecoverer">
+                    <!-- <bean
+                        class="com.sf.heros.mq.consumer.utils.MQRejectAndDontRequeueRecoverer" /> -->
+                    <bean class="com.sf.heros.mq.consumer.utils.MQRepublishMessageRecoverer"/>
+                </property>
+                <property name="retryOperations">
+                    <bean class="org.springframework.retry.support.RetryTemplate">
+                        <property name="backOffPolicy">
+                            <bean
+                                class="org.springframework.retry.backoff.ExponentialBackOffPolicy">
+                                <property name="initialInterval" value="500" />
+                                <property name="multiplier" value="10.0" />
+                                <property name="maxInterval" value="10000" />
+                            </bean>
+                        </property>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+        <property name="errorHandler">
+            <bean class="com.sf.heros.mq.consumer.utils.MQErrorHandler"/>
+        </property>
+    </bean>
+
+    <!-- <bean
+        class="org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer">
+        <property name="connectionFactory" ref="connectionFactory" />
+        <property name="acknowledgeMode" ref="ackManual" />
+        <property name="queueNames" value="${rabbitmq.national.day.activity.queue}" />
+        <property name="messageListener">
+            <bean class="com.sf.heros.mq.consumer.listener.NationalDayActivityListener" />
+        </property>
+        <property name="concurrentConsumers" value="${rabbitmq.concurrentConsumers}" />
+        <property name="channelTransacted" value="true"/>
+        <property name="adviceChain">
+            <bean
+                class="org.springframework.amqp.rabbit.config.StatelessRetryOperationsInterceptorFactoryBean">
+                <property name="messageRecoverer">
+                    <bean
+                        class="com.sf.heros.mq.consumer.utils.MQRejectAndDontRequeueRecoverer" />
+                    <bean class="com.sf.heros.mq.consumer.utils.MQRepublishMessageRecoverer"/>
+                </property>
+                <property name="retryOperations">
+                    <bean class="org.springframework.retry.support.RetryTemplate">
+                        <property name="backOffPolicy">
+                            <bean
+                                class="org.springframework.retry.backoff.ExponentialBackOffPolicy">
+                                <property name="initialInterval" value="500" />
+                                <property name="multiplier" value="10.0" />
+                                <property name="maxInterval" value="10000" />
+                            </bean>
+                        </property>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+        <property name="errorHandler">
+            <bean class="com.sf.heros.mq.consumer.utils.MQErrorHandler"/>
+        </property>
+    </bean>
+ -->
+    <bean
+        class="org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer">
+        <property name="connectionFactory" ref="connectionFactory" />
+        <property name="acknowledgeMode" ref="ackManual" />
+        <property name="queueNames" value="${rabbitmq.transaction.sequence.queue}" />
+        <property name="messageListener">
+            <bean class="com.sf.heros.mq.consumer.listener.TransactionSequenceListener" />
+        </property>
+        <property name="concurrentConsumers" value="${rabbitmq.concurrentConsumers}" />
+        <!-- <property name="channelTransacted" value="true"/> -->
+        <property name="adviceChain">
+            <bean
+                class="org.springframework.amqp.rabbit.config.StatelessRetryOperationsInterceptorFactoryBean">
+                <property name="messageRecoverer">
+                    <!-- <bean
+                        class="com.sf.heros.mq.consumer.utils.MQRejectAndDontRequeueRecoverer" /> -->
+                    <bean class="com.sf.heros.mq.consumer.utils.MQRepublishMessageRecoverer"/>
+                </property>
+                <property name="retryOperations">
+                    <bean class="org.springframework.retry.support.RetryTemplate">
+                        <property name="backOffPolicy">
+                            <bean
+                                class="org.springframework.retry.backoff.ExponentialBackOffPolicy">
+                                <property name="initialInterval" value="500" />
+                                <property name="multiplier" value="10.0" />
+                                <property name="maxInterval" value="10000" />
+                            </bean>
+                        </property>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+        <property name="errorHandler">
+            <bean class="com.sf.heros.mq.consumer.utils.MQErrorHandler"/>
+        </property>
+    </bean>
+
+    <!-- <bean
+        class="org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer">
+        <property name="connectionFactory" ref="connectionFactory" />
+        <property name="acknowledgeMode" ref="ackManual" />
+        <property name="queueNames" value="${rabbitmq.mews.sync.queue}" />
+        <property name="messageListener">
+            <bean class="com.sf.heros.mq.consumer.listener.NewsSyncLinstener" />
+        </property>
+        <property name="concurrentConsumers" value="${rabbitmq.concurrentConsumers}" />
+        <property name="channelTransacted" value="true"/>
+        <property name="adviceChain">
+            <bean
+                class="org.springframework.amqp.rabbit.config.StatelessRetryOperationsInterceptorFactoryBean">
+                <property name="messageRecoverer">
+                    <bean
+                        class="com.sf.heros.mq.consumer.utils.MQRejectAndDontRequeueRecoverer" />
+                    <bean class="com.sf.heros.mq.consumer.utils.MQRepublishMessageRecoverer"/>
+                </property>
+                <property name="retryOperations">
+                    <bean class="org.springframework.retry.support.RetryTemplate">
+                        <property name="backOffPolicy">
+                            <bean
+                                class="org.springframework.retry.backoff.ExponentialBackOffPolicy">
+                                <property name="initialInterval" value="500" />
+                                <property name="multiplier" value="10.0" />
+                                <property name="maxInterval" value="10000" />
+                            </bean>
+                        </property>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+        <property name="errorHandler">
+            <bean class="com.sf.heros.mq.consumer.utils.MQErrorHandler"/>
+        </property>
+    </bean> -->
+
+    <bean id="msgConverter"
+        class="org.springframework.amqp.support.converter.SimpleMessageConverter" />
+
+	<rabbit:template id="amqpTemplate" connection-factory="connectionFactory"/>
+
+
+</beans>

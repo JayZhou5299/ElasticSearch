@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans     xmlns="http://www.springframework.org/schema/beans"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:p="http://www.springframework.org/schema/p"
+           xmlns:tx="http://www.springframework.org/schema/tx"
+           xmlns:context="http://www.springframework.org/schema/context"
+           xsi:schemaLocation="
+            http://www.springframework.org/schema/beans
+            http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
+    <!-- jedis pool配置 -->
+    <bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
+            <!--最大连接数-->
+        <property name="maxTotal" value="${redis.maxTotal}" />
+            <!--最大空闲连接数-->
+        <property name="maxIdle" value="${redis.maxIdle}" />
+            <!--初始化连接数-->
+        <property name="minIdle" value="${redis.minIdle}"/>
+            <!--最大等待时间-->
+        <property name="maxWaitMillis" value="${redis.maxWaitMillis}" />
+            <!--对拿到的connection进行validateObject校验-->
+        <property name="testOnBorrow" value="${redis.testOnBorrow}" />
+            <!--在进行returnObject对返回的connection进行validateObject校验-->
+        <property name="testOnReturn" value="${redis.testOnReturn}" />
+            <!--定时对线程池中空闲的链接进行validateObject校验-->
+        <property name="testWhileIdle" value="true" />
+    </bean>
+
+<!--     <bean id="jedisPool" class="redis.clients.jedis.JedisSentinelPool">
+        <constructor-arg index="0" value="mymaster" />
+        <constructor-arg index="1">
+        	<set>
+        		<value>${redis.sentinel.1}</value>
+        		<value>${redis.sentinel.2}</value>
+        		<value>${redis.sentinel.3}</value>
+        	</set>
+        </constructor-arg>
+        <constructor-arg index="2" ref="jedisPoolConfig" />
+        <constructor-arg index="3" type="int" value="10000" />
+    </bean> -->
+
+	<bean id="jedisPool" class="redis.clients.jedis.JedisPool" destroy-method="destroy">
+		<constructor-arg index="0" ref="jedisPoolConfig"/>
+        <constructor-arg index="1" value="${redis.host}"/>
+        <constructor-arg index="2" value="${redis.port}"/>
+        <constructor-arg index="3" value="100000"/>
+        <constructor-arg index="4">
+        	<null></null>
+        </constructor-arg>
+        <constructor-arg index="5" value="0"/>
+	</bean>
+
+    <bean id="redisService" class="com.sf.heros.mq.consumer.service.RedisService" />
+
+</beans>
